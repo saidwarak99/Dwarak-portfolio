@@ -1,5 +1,5 @@
 // ==============================================================================
-// Database Type Exports (Drizzle Inferred)
+// Database Type Exports (Supabase Data API)
 // ==============================================================================
 export type {
   Project,
@@ -16,4 +16,6 @@ export type {
   InsertSiteSettings,
   MediaAsset,
   InsertMediaAsset,
-} from "@/db/schema";
+  AdminUser,
+  Database,
+} from "@/types/database.types";
