@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --canvas: #FFF7F5;
+  --accent: #EC2929;
+  --accent-hover: #D01C1C;
+  --ink: #230D10;
+  --ink-secondary: #6B4D52;
+  --surface: #F5D9D5;
+  --surface-hover: #EDC5BF;
+  --border-subtle: #E8CEC9;
+  --border-strong: #230D10;
+  --card-bg: #FFFFFF;
+  --font-syne: 'Syne', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-plus-jakarta: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@theme {
+  --color-canvas: var(--canvas);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-card-bg: var(--card-bg);
+
+  --font-display: var(--font-syne), "Impact", "Arial Black", sans-serif;
+  --font-body: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+body {
+  overflow-x: hidden;
+  background-color: var(--canvas);
+  color: var(--ink);
+}
+
+/* Custom editorial brutalist styling utilities */
+.brutalist-border {
+  border: 1.5px solid var(--border-strong);
+}
+
+.brutalist-border-subtle {
+  border: 1.5px solid var(--border-subtle);
+}
+
+.brutalist-shadow-sm {
+  box-shadow: 2px 2px 0px var(--border-strong);
+}
+
+.brutalist-shadow {
+  box-shadow: 3px 3px 0px var(--border-strong);
+}
+
+.brutalist-shadow-lg {
+  box-shadow: 5px 5px 0px var(--border-strong);
+}
+
+.brutalist-shadow-accent {
+  box-shadow: 3px 3px 0px var(--accent);
+}
+
+/* Subtle grid backdrop for hero and cards */
+.editorial-grid {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(236, 41, 41, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(236, 41, 41, 0.05) 1px, transparent 1px);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
