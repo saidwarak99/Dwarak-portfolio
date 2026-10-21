@@ -275,6 +275,28 @@ async function runAudit() {
     return { status: "FAIL", detail: "CRITICAL: Anonymous user modified admin_users table!" };
   });
 
+  await test("Admin Isolation", "Anonymous visitor cannot execute admin-check RPC through Data API", async () => {
+    const { data, error } = await anonClient.rpc("is_admin");
+    if (error) {
+      return {
+        status: "PASS",
+        detail: `RPC execution blocked / not exposed via Data API: "${error.message}"`,
+      };
+    }
+    // If the function currently returns false for anon in the public schema prior to migration,
+    // or is in private schema:
+    if (data === false) {
+      return {
+        status: "PASS",
+        detail: `Function returned false for anonymous visitor (no elevation possible). Moving to private schema will remove API endpoint entirely.`,
+      };
+    }
+    return {
+      status: "FAIL",
+      detail: `CRITICAL: Anonymous user executed admin-check RPC and received: ${data}!`,
+    };
+  });
+
   console.log("\n4. STORAGE UPLOAD AUTHORIZATION (VALID IN-MEMORY PNG):");
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

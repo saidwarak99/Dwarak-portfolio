@@ -32,11 +32,7 @@ COMMENT ON TABLE public.admin_users IS 'Administrative credentials mapping auth.
 
 -- Hardened Security Definer function to check if the current user is an authorized admin
 CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
+RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 
@@ -44,7 +40,7 @@ BEGIN
     WHERE user_id = auth.uid()
   );
 END;
-$$;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Enable RLS on admin_users
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
