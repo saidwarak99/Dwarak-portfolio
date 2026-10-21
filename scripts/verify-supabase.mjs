@@ -402,10 +402,19 @@ async function runAudit() {
     const client = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: authData, error: authErr } = await client.auth.signInWithPassword({
+    await sleep(300);
+    let authRes = await client.auth.signInWithPassword({
       email: nonAdminEmail,
       password: nonAdminPassword,
     });
+    if (authRes.error && String(authRes.error.message || "").includes("fetch failed")) {
+      await sleep(800);
+      authRes = await client.auth.signInWithPassword({
+        email: nonAdminEmail,
+        password: nonAdminPassword,
+      });
+    }
+    const { data: authData, error: authErr } = authRes;
 
     if (!authErr && authData?.session) {
       nonAdminClient = client;
