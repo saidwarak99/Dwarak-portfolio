@@ -134,8 +134,9 @@ async function runValidation() {
   });
 
   await test("Anonymous update of site_settings is BLOCKED", async () => {
-    const { error } = await anonClient.from("site_settings").update({ display_name: "Hacked" }).eq("id", 1);
+    const { data, error } = await anonClient.from("site_settings").update({ display_name: "Hacked" }).eq("id", 1).select();
     if (error) return { success: true, detail: `Correctly rejected: ${error.message}` };
+    if (!data || data.length === 0) return { success: true, detail: "0 rows modified (RLS write isolation enforced)" };
     return { success: false, detail: "Security violation: Anonymous update succeeded!" };
   });
 
