@@ -93,7 +93,7 @@ export function Hero({
                   className="text-xs sm:text-base md:text-xl font-black text-[#EC2929] tracking-wider uppercase font-mono"
                   style={{ fontFamily: "var(--font-syne)" }}
                 >
-                  SAI DWARAK
+                  {ownerName}
                 </span>
               </div>
             </div>

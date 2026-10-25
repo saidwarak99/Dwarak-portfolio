@@ -2,25 +2,39 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock, ArrowLeft, ShieldCheck, Sparkles, AlertCircle, CheckCircle2, Loader2, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Lock, ArrowLeft, ShieldCheck, Sparkles, AlertCircle, CheckCircle2, Loader2, LogOut, ArrowRight } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
     setConfigured(isSupabaseConfigured());
     const supabase = createClient();
     if (supabase) {
-      supabase.auth.getUser().then(({ data }) => {
+      supabase.auth.getUser().then(async ({ data }) => {
         if (data.user?.email) {
           setCurrentUser(data.user.email);
+          // Check admin status
+          const { data: adminRow } = await supabase
+            .from("admin_users")
+            .select("user_id, role")
+            .eq("user_id", data.user.id)
+            .single();
+
+          setIsAdmin(Boolean(adminRow));
+        } else {
+          setCurrentUser(null);
+          setIsAdmin(null);
         }
       });
     }
@@ -33,7 +47,7 @@ export default function AdminLoginPage() {
 
     if (!isSupabaseConfigured()) {
       setErrorMessage(
-        "Supabase is not yet configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env.local."
+        "Supabase is not yet configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) in .env.local."
       );
       return;
     }
@@ -54,9 +68,28 @@ export default function AdminLoginPage() {
       if (error) {
         setErrorMessage(error.message);
       } else if (data.user) {
-        setSuccessMessage(`Authenticated as ${data.user.email}. Checking administrator status...`);
-        setCurrentUser(data.user.email ?? null);
-        // In Phase 3, redirect to /admin dashboard
+        // Verify admin status
+        const { data: adminRow } = await supabase
+          .from("admin_users")
+          .select("user_id, role")
+          .eq("user_id", data.user.id)
+          .single();
+
+        if (adminRow) {
+          setSuccessMessage("Administrator verified! Redirecting to dashboard...");
+          setIsAdmin(true);
+          setCurrentUser(data.user.email ?? null);
+          setTimeout(() => {
+            router.push("/admin");
+            router.refresh();
+          }, 400);
+        } else {
+          setCurrentUser(data.user.email ?? null);
+          setIsAdmin(false);
+          setErrorMessage(
+            `Access Denied: Account "${data.user.email}" authenticated, but is not allowlisted in public.admin_users.`
+          );
+        }
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "An unexpected authentication error occurred.");
@@ -136,10 +169,41 @@ export default function AdminLoginPage() {
         {/* Active Session Display */}
         {currentUser ? (
           <div className="space-y-4">
-            <div className="p-4 border border-[#230D10] bg-white text-xs font-mono space-y-1">
-              <span className="text-[#4A2E33] uppercase">Current Session:</span>
-              <p className="font-bold text-[#230D10] break-all">{currentUser}</p>
-            </div>
+            {isAdmin === true ? (
+              <>
+                <div className="p-4 border-2 border-[#230D10] bg-[#E8F8EE] text-xs font-mono space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[#166534] font-bold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>AUTHENTICATED ADMINISTRATOR</span>
+                  </div>
+                  <p className="font-bold text-[#230D10] break-all">{currentUser}</p>
+                </div>
+                <Link
+                  href="/admin"
+                  className="w-full py-2.5 px-4 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#D01C1C] transition-colors flex items-center justify-center gap-2 brutalist-shadow-sm active:translate-x-0.5 active:translate-y-0.5 text-center"
+                >
+                  <span>GO TO DASHBOARD</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            ) : isAdmin === false ? (
+              <div className="p-4 border-2 border-[#EC2929] bg-[#FFF0F0] text-xs font-mono space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#EC2929] font-bold">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>NON-ADMINISTRATIVE USER</span>
+                </div>
+                <p className="font-bold text-[#230D10] break-all">{currentUser}</p>
+                <p className="text-[#4A2E33] text-[11px] leading-relaxed">
+                  This user account is authenticated, but is not present in the <code className="bg-[#F5D9D5] px-1 rounded">admin_users</code> table. Sign out to log in with an administrator account.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 border border-[#230D10] bg-white text-xs font-mono space-y-1">
+                <span className="text-[#4A2E33] uppercase">Current Session:</span>
+                <p className="font-bold text-[#230D10] break-all">{currentUser}</p>
+              </div>
+            )}
+
             <button
               onClick={handleSignOut}
               className="w-full py-2.5 px-4 bg-[#FFF7F5] text-[#230D10] text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#F5D9D5] transition-colors flex items-center justify-center gap-2 brutalist-shadow-sm active:translate-x-0.5 active:translate-y-0.5"

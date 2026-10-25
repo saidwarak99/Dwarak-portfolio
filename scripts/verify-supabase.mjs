@@ -7,7 +7,29 @@
 
 import fs from "fs";
 import path from "path";
+import dns from "dns";
 import { createClient } from "@supabase/supabase-js";
+
+// Ensure IPv6/NAT64 connectivity on IPv6-only networks
+try {
+  dns.setServers(["2001:4860:4860::6464", "2001:4860:4860::6460"]);
+  const origLookup = dns.lookup;
+  dns.lookup = function (hostname, options, callback) {
+    const cb = typeof options === "function" ? options : callback;
+    const opts = typeof options === "object" ? options : {};
+    dns.resolve6(hostname, (err, addrs) => {
+      if (!err && addrs && addrs.length > 0) {
+        if (opts && opts.all) {
+          return cb(null, addrs.map((a) => ({ address: a, family: 6 })));
+        }
+        return cb(null, addrs[0], 6);
+      }
+      return origLookup.call(dns, hostname, options, callback);
+    });
+  };
+} catch {
+  // Fallback to default DNS
+}
 
 // 1. Read .env.local configuration
 const envLocalPath = path.resolve(process.cwd(), ".env.local");

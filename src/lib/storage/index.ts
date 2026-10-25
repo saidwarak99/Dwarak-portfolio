@@ -17,7 +17,12 @@ export const STORAGE_LIMITS = {
     "image/png",
     "image/jpeg",
     "image/webp",
-    "image/svg+xml",
+    "image/gif",
+  ],
+  ALLOWED_PRIVATE_IMAGE_MIMES: [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
     "image/gif",
   ],
   ALLOWED_DOCUMENT_MIMES: ["application/pdf"],
@@ -63,11 +68,13 @@ export async function getPrivateAssetSignedUrl(
 
 /**
  * Validates a file's MIME type and size prior to storage upload.
+ * Strictly disallows SVG uploads across all buckets to prevent stored XSS vulnerabilities.
  */
 export function validateAsset(
   mimeType: string,
   sizeBytes: number,
-  isDocument: boolean = false
+  isDocument: boolean = false,
+  _accessModeOrBucket: "public" | "private" | "portfolio-public" | "portfolio-private" = "public"
 ): { valid: boolean; error?: string } {
   if (isDocument) {
     if (!STORAGE_LIMITS.ALLOWED_DOCUMENT_MIMES.includes(mimeType as "application/pdf")) {
@@ -77,8 +84,16 @@ export function validateAsset(
       return { valid: false, error: "Document file size exceeds 20MB limit." };
     }
   } else {
-    if (!STORAGE_LIMITS.ALLOWED_IMAGE_MIMES.includes(mimeType as "image/png")) {
-      return { valid: false, error: "Invalid image format. Supported formats: PNG, JPEG, WebP, SVG, GIF." };
+    // Strictly reject SVG uploads to prevent stored XSS attacks
+    if (mimeType === "image/svg+xml") {
+      return {
+        valid: false,
+        error: "SVG uploads are disabled for security reasons (stored XSS prevention). Please upload raster images (PNG, JPEG, WebP, GIF) or PDF documents.",
+      };
+    }
+
+    if (!STORAGE_LIMITS.ALLOWED_IMAGE_MIMES.includes(mimeType as any)) {
+      return { valid: false, error: "Invalid image format. Supported formats: PNG, JPEG, WebP, GIF." };
     }
     if (sizeBytes > STORAGE_LIMITS.IMAGE_MAX_BYTES) {
       return { valid: false, error: "Image file size exceeds 10MB limit." };
@@ -86,6 +101,34 @@ export function validateAsset(
   }
 
   return { valid: true };
+}
+
+/**
+ * Sanitizes a filename to prevent path traversal, control characters, or invalid storage keys.
+ * Preserves the file extension if present and safe.
+ */
+export function sanitizeStorageFilename(filename: string): string {
+  // 1. Strip any directory path components to prevent traversal
+  const rawBase = filename.split(/[/\\]/).pop() || "asset";
+  // 2. Strip leading dots to prevent hidden dotfiles
+  const base = rawBase.replace(/^\.+/, "") || "asset";
+
+  // 3. Separate clean base name from extension
+  const parts = base.split(".");
+  const ext = parts.length > 1 ? parts.pop()?.toLowerCase() : "";
+  const name = parts.join(".");
+
+  const cleanName = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+
+  const cleanExt = ext ? ext.replace(/[^a-zA-Z0-9]/g, "") : "";
+  const finalName = cleanExt ? `${cleanName || "asset"}.${cleanExt}` : cleanName || "asset";
+  return finalName;
 }
 
 /**
@@ -153,3 +196,64 @@ export async function promoteAssetToPublic(
     };
   }
 }
+
+/**
+ * Server-side demotion: Moves an asset from portfolio-public to portfolio-private
+ * and updates the media_assets metadata table.
+ *
+ * Ensures the public file is genuinely removed from public delivery.
+ */
+export async function demoteAssetToPrivate(
+  publicPath: string,
+  privatePath: string
+): Promise<{ success: boolean; error?: string }> {
+  await assertServerAdmin();
+  const supabase = await createClient();
+  if (!supabase) return { success: false, error: "Supabase client uninitialized" };
+
+  try {
+    // 1. Download public asset buffer
+    const { data: fileBlob, error: downloadError } = await supabase.storage
+      .from(STORAGE_BUCKETS.PUBLIC)
+      .download(publicPath);
+
+    if (downloadError || !fileBlob) {
+      return { success: false, error: `Failed to read public asset: ${downloadError?.message}` };
+    }
+
+    // 2. Upload to private bucket
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKETS.PRIVATE)
+      .upload(privatePath, fileBlob, {
+        contentType: fileBlob.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      return { success: false, error: `Failed to upload to private bucket: ${uploadError.message}` };
+    }
+
+    // 3. Remove from public bucket so it can no longer be delivered publicly
+    await supabase.storage.from(STORAGE_BUCKETS.PUBLIC).remove([publicPath]);
+
+    // 4. Update media_assets metadata row
+    await supabase
+      .from("media_assets")
+      .update({
+        bucket_id: STORAGE_BUCKETS.PRIVATE,
+        storage_path: privatePath,
+        url: `storage://${STORAGE_BUCKETS.PRIVATE}/${privatePath}`,
+        access_mode: "private",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("storage_path", publicPath);
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Demotion failed",
+    };
+  }
+}
+

@@ -1,11 +1,26 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, BookOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LabsSection } from "@/components/LabsSection";
+import { getPublishedPosts } from "@/lib/supabase/queries";
 
-export default function LabsIndexPage() {
+export const instant = false;
+
+export default async function LabsIndexPage() {
+  const posts = await getPublishedPosts();
+
+  const formattedArticles = posts.map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    category: p.category,
+    tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+    publishedAt: p.published_at,
+    readingTime: "Technical Note",
+  }));
+
   return (
     <div className="min-h-screen bg-[#FFF7F5] flex flex-col selection:bg-[#EC2929] selection:text-white">
       <Navbar />
@@ -21,7 +36,7 @@ export default function LabsIndexPage() {
           </Link>
         </div>
 
-        <LabsSection />
+        <LabsSection articles={formattedArticles} />
       </main>
 
       <Footer />

@@ -4,54 +4,80 @@ import React, { useState } from "react";
 import { Sparkles, ArrowUpRight } from "lucide-react";
 import { CharacterAvatar } from "./CharacterAvatar";
 import { SectionDivider } from "./SectionDivider";
+import type { Tool, ToolCategory as DBToolCategory } from "@/types/database.types";
 
 export interface ToolItem {
   name: string;
-  category: "design" | "ai" | "engineering";
+  category: string;
   role: string;
+  externalUrl?: string | null;
 }
 
-export interface ToolCategory {
-  id: "all" | "design" | "ai" | "engineering";
+export interface ToolCategoryItem {
+  id: string;
   label: string;
   description: string;
 }
 
-const toolCategories: ToolCategory[] = [
+const defaultToolCategories: ToolCategoryItem[] = [
   { id: "all", label: "All Tools", description: "Complete stack & workflow directory" },
-  { id: "design", label: "Design & Prototyping", description: "Visual craft, design systems & interactive prototypes" },
-  { id: "ai", label: "AI & AI-assisted Dev", description: "Model intelligence, reasoning & agentic environments" },
-  { id: "engineering", label: "Development & Engineering", description: "Modern full-stack, APIs, data pipelines & vector retrieval" },
+  { id: "c1000000-0000-0000-0000-000000000001", label: "Design & Systems", description: "Visual craft, design systems & interactive prototypes" },
+  { id: "c1000000-0000-0000-0000-000000000002", label: "Frontend Architecture", description: "App Router, SSR, Turbopack & type systems" },
+  { id: "c1000000-0000-0000-0000-000000000003", label: "AI & Generative Tooling", description: "Model intelligence, reasoning & agentic environments" },
+  { id: "c1000000-0000-0000-0000-000000000004", label: "Prototyping & Workflow", description: "Generative prototyping, PostgreSQL, Auth & cloud storage" },
 ];
 
-const confirmedTools: ToolItem[] = [
-  // Design & Prototyping
-  { name: "Figma", category: "design", role: "Interface Design & Design Systems" },
-  { name: "Lovable", category: "design", role: "Rapid Functional Web Prototyping" },
-  { name: "Base44", category: "design", role: "Interactive Product Explorations" },
-
-  // AI & AI-assisted Development
-  { name: "ChatGPT", category: "ai", role: "AI Intelligence & Strategy" },
-  { name: "Gemini", category: "ai", role: "Multimodal Reasoning & Context" },
-  { name: "Antigravity", category: "ai", role: "Agentic IDE & Automated Coding" },
-  { name: "Cursor", category: "ai", role: "AI-Augmented Code Editor" },
-  { name: "Claude Code", category: "ai", role: "Agentic Terminal & Logic Reasoning" },
-
-  // Development & AI Engineering
-  { name: "Python", category: "engineering", role: "Core AI Logic & Data Pipelines" },
-  { name: "Tailwind CSS", category: "engineering", role: "Utility-First Design Tokens" },
-  { name: "FastAPI", category: "engineering", role: "High-Performance Backend Services" },
-  { name: "Supabase", category: "engineering", role: "PostgreSQL, Auth & Storage Engine" },
-  { name: "RAG", category: "engineering", role: "Retrieval-Augmented Generation & Vector Stores" },
+const fallbackTools: ToolItem[] = [
+  { name: "Figma", category: "c1000000-0000-0000-0000-000000000001", role: "Interface Design & Design Systems" },
+  { name: "Framer", category: "c1000000-0000-0000-0000-000000000001", role: "Interactive Web Design & Canvas" },
+  { name: "Tailwind CSS", category: "c1000000-0000-0000-0000-000000000001", role: "Utility-First Design Tokens" },
+  { name: "Next.js", category: "c1000000-0000-0000-0000-000000000002", role: "App Router & React Foundation" },
+  { name: "TypeScript", category: "c1000000-0000-0000-0000-000000000002", role: "Predictable Component Contracts" },
+  { name: "React", category: "c1000000-0000-0000-0000-000000000002", role: "Component Declarative UI" },
+  { name: "Claude", category: "c1000000-0000-0000-0000-000000000003", role: "Reasoning Partner & Prompt Design" },
+  { name: "Cursor", category: "c1000000-0000-0000-0000-000000000003", role: "AI-Augmented Code Editor" },
+  { name: "GitHub Copilot", category: "c1000000-0000-0000-0000-000000000003", role: "Snippet Acceleration & Scaffolding" },
+  { name: "Midjourney", category: "c1000000-0000-0000-0000-000000000003", role: "Visual Exploration & Concept Art" },
+  { name: "OpenAI API", category: "c1000000-0000-0000-0000-000000000003", role: "Structured Outputs & Logic" },
+  { name: "v0 by Vercel", category: "c1000000-0000-0000-0000-000000000004", role: "Generative UI Prototyping" },
+  { name: "Supabase", category: "c1000000-0000-0000-0000-000000000004", role: "PostgreSQL, Auth & Storage Engine" },
 ];
 
-export function ToolsSection() {
-  const [activeCategoryId, setActiveCategoryId] = useState<"all" | "design" | "ai" | "engineering">("all");
+interface ToolsSectionProps {
+  categories?: DBToolCategory[];
+  tools?: Tool[];
+}
+
+export function ToolsSection({ categories, tools }: ToolsSectionProps) {
+  // Build category filter pills
+  const categoryPills: ToolCategoryItem[] = [
+    { id: "all", label: "All Tools", description: "Complete stack & workflow directory" },
+    ...(categories && categories.length > 0
+      ? categories.map((c) => ({
+          id: c.id,
+          label: c.name,
+          description: `${c.name} workflow directory`,
+        }))
+      : defaultToolCategories.filter((c) => c.id !== "all")),
+  ];
+
+  // Map tools items
+  const toolItems: ToolItem[] =
+    tools && tools.length > 0
+      ? tools.map((t) => ({
+          name: t.name,
+          category: t.category_id || "unassigned",
+          role: t.description,
+          externalUrl: t.external_url,
+        }))
+      : fallbackTools;
+
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
   const filteredTools =
     activeCategoryId === "all"
-      ? confirmedTools
-      : confirmedTools.filter((t) => t.category === activeCategoryId);
+      ? toolItems
+      : toolItems.filter((t) => t.category === activeCategoryId);
 
   return (
     <section id="tools" aria-label="Tools Section" className="pt-16 pb-0 bg-[#FFF7F5] relative">
@@ -78,7 +104,7 @@ export function ToolsSection() {
 
           {/* Data-Driven Category Filter Pills */}
           <div className="flex flex-wrap gap-2 text-xs font-mono font-bold" role="tablist">
-            {toolCategories.map((cat) => (
+            {categoryPills.map((cat) => (
               <button
                 key={cat.id}
                 role="tab"
@@ -112,7 +138,7 @@ export function ToolsSection() {
               {/* Poster Header */}
               <div className="w-full flex justify-between items-center text-xs font-mono font-bold border-b border-[#230D10] pb-3 text-[#230D10]">
                 <span>WORKFLOW ENGINE</span>
-                <span className="text-[#EC2929]">✦ 13 CORE TOOLS</span>
+                <span className="text-[#EC2929]">✦ {toolItems.length} CORE TOOLS</span>
               </div>
 
               {/* Illustrated Character Centerpiece: Sai sitting with Laptop */}
@@ -135,7 +161,7 @@ export function ToolsSection() {
             <div className="border-2 border-[#230D10] bg-white p-4 sm:p-6 brutalist-shadow-lg flex-1">
               <div className="flex justify-between items-center border-b border-[#E8CEC9] pb-3 mb-4 text-xs font-mono font-bold text-[#230D10]">
                 <span className="uppercase text-xs tracking-wider">
-                  {toolCategories.find((c) => c.id === activeCategoryId)?.description}
+                  {categoryPills.find((c) => c.id === activeCategoryId)?.description}
                 </span>
                 <span className="text-[#EC2929] text-xs font-bold">2026 STACK</span>
               </div>
@@ -161,7 +187,18 @@ export function ToolsSection() {
                       </div>
                     </div>
 
-                    <ArrowUpRight className="w-4 h-4 text-[#4A2E33] group-hover:text-[#EC2929] transition-colors flex-shrink-0" />
+                    {tool.externalUrl ? (
+                      <a
+                        href={tool.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 hover:text-[#EC2929] transition-colors"
+                      >
+                        <ArrowUpRight className="w-4 h-4 text-[#4A2E33] group-hover:text-[#EC2929] transition-colors flex-shrink-0" />
+                      </a>
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4 text-[#4A2E33] group-hover:text-[#EC2929] transition-colors flex-shrink-0" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -169,7 +206,9 @@ export function ToolsSection() {
               {/* Stack Note */}
               <div className="mt-4 pt-3 border-t border-[#E8CEC9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-mono text-[#4A2E33]">
                 <span>Curated directory ({filteredTools.length} {filteredTools.length === 1 ? "tool" : "tools"} shown)</span>
-                <span className="text-[#EC2929] font-bold tracking-wide">13 TOOLS IN MY WORKFLOW</span>
+                <span className="text-[#EC2929] font-bold tracking-wide">
+                  {toolItems.length} TOOLS IN MY WORKFLOW
+                </span>
               </div>
             </div>
           </div>

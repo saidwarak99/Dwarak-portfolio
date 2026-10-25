@@ -70,3 +70,18 @@ export async function assertServerAdmin(): Promise<AuthenticatedAdmin> {
   }
   return admin;
 }
+
+/**
+ * Returns the currently authenticated Supabase Auth user (if any),
+ * regardless of their administrative allowlist status.
+ */
+export async function getSessionUser() {
+  const supabase = await createClient();
+  if (!supabase) return null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  } catch {
+    return null;
+  }
+}

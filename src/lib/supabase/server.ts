@@ -1,8 +1,8 @@
 // ==============================================================================
-// Supabase Server Client (Phase 2.3)
-// Server Components and Route Handlers with Cookie-based Authentication
+// Supabase Server Client (Phase 2.3 & Phase 3)
+// Server Components, Server Actions, and Route Handlers with Cookie Sessions
 // ==============================================================================
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database.types";
 import { getSupabaseKeys, isSupabaseConfigured } from "./client";
@@ -20,21 +20,16 @@ export async function createClient() {
 
   return createServerClient<Database>(url, key, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(cookiesToSet) {
         try {
-          cookieStore.set({ name, value, ...options });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
         } catch {
-          // Handled when called from Server Components where cookies cannot be mutated
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        } catch {
-          // Handled when called from Server Components
+          // Handled when called from Server Components where response cookies cannot be mutated
         }
       },
     },

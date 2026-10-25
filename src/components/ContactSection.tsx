@@ -3,17 +3,30 @@
 import React, { useState } from "react";
 import { Sparkles, Mail, ArrowUpRight, Send } from "lucide-react";
 
-export function ContactSection() {
+interface ContactSectionProps {
+  email?: string;
+  linkedin?: string;
+  github?: string;
+}
+
+export function ContactSection({
+  email = "saidwarak99@gmail.com",
+  linkedin = "https://www.linkedin.com/in/sai-dwarak99/",
+  github = "https://github.com/saidwarak99",
+}: ContactSectionProps) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
   const handleComposeMailto = (e: React.FormEvent) => {
     e.preventDefault();
-    const mailtoUrl = `mailto:saidwarak99@gmail.com?subject=${encodeURIComponent(
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
       subject || "Portfolio Inquiry — Sai Dwarak"
     )}&body=${encodeURIComponent(message)}`;
     window.location.href = mailtoUrl;
   };
+
+  const cleanLinkedin = linkedin.replace(/^https?:\/\/(www\.)?/, "");
+  const cleanGithub = github.replace(/^https?:\/\/(www\.)?/, "");
 
   return (
     <section id="contact" aria-label="Contact Section" className="pt-16 pb-16 bg-[#FFF7F5] relative">
@@ -76,7 +89,7 @@ export function ContactSection() {
             <div className="lg:col-span-6 space-y-3">
               {/* LinkedIn Card */}
               <a
-                href="https://www.linkedin.com/in/sai-dwarak99/"
+                href={linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-4 border-2 border-[#230D10] bg-white hover:bg-[#F5D9D5] transition-all brutalist-shadow-sm group hover:translate-x-1"
@@ -88,7 +101,7 @@ export function ContactSection() {
                       viewBox="0 0 24 24"
                       xmlns="http://www.w3.org/2000/svg"
                     >
-                      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.64a1.66 1.66 0 0 0-1.66 1.66 1.66 1.66 0 0 0 1.66 1.66 1.66 1.66 0 0 0 1.66-1.66 1.66 1.66 0 0 0-1.66-1.66Z" />
+                      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.64a1.66 1.66 0 0 0-1.66 1.66 1.66 1.66 0 0 0 1.66 1.66 1.66 1.66 0 0 0 1.66-1.66Z" />
                     </svg>
                   </div>
                   <div>
@@ -96,7 +109,7 @@ export function ContactSection() {
                       LINKEDIN
                     </div>
                     <div className="text-sm font-bold text-[#230D10]">
-                      linkedin.com/in/sai-dwarak99
+                      {cleanLinkedin || "LinkedIn Profile"}
                     </div>
                   </div>
                 </div>
@@ -105,7 +118,7 @@ export function ContactSection() {
 
               {/* GitHub Card */}
               <a
-                href="https://github.com/saidwarak99"
+                href={github}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-4 border-2 border-[#230D10] bg-white hover:bg-[#F5D9D5] transition-all brutalist-shadow-sm group hover:translate-x-1"
@@ -125,7 +138,7 @@ export function ContactSection() {
                       GITHUB
                     </div>
                     <div className="text-sm font-bold text-[#230D10]">
-                      github.com/saidwarak99
+                      {cleanGithub || "GitHub Profile"}
                     </div>
                   </div>
                 </div>
@@ -134,7 +147,7 @@ export function ContactSection() {
 
               {/* Email Card */}
               <a
-                href="mailto:saidwarak99@gmail.com"
+                href={`mailto:${email}`}
                 className="flex items-center justify-between p-4 border-2 border-[#230D10] bg-white hover:bg-[#F5D9D5] transition-all brutalist-shadow-sm group hover:translate-x-1"
               >
                 <div className="flex items-center gap-3">
@@ -146,7 +159,7 @@ export function ContactSection() {
                       DIRECT EMAIL
                     </div>
                     <div className="text-sm font-bold text-[#230D10]">
-                      saidwarak99@gmail.com
+                      {email}
                     </div>
                   </div>
                 </div>
