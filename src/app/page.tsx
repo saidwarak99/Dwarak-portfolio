@@ -3,19 +3,30 @@ import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
 import { ToolsSection } from "@/components/ToolsSection";
-import { ProjectGalleries } from "@/components/ProjectGalleries";
+import { WorkSection } from "@/components/WorkSection";
 import { LabsSection } from "@/components/LabsSection";
 import { ContactSection } from "@/components/ContactSection";
 import { Footer } from "@/components/Footer";
-import { getToolsData, getPublishedPosts, getSiteSettings } from "@/lib/supabase/queries";
+import fs from "fs";
+import path from "path";
+import {
+  getToolsData,
+  getPublishedPosts,
+  getSiteSettings,
+  getPublishedProjects,
+} from "@/lib/supabase/queries";
 
 export const instant = false;
 
 export default async function Home() {
-  const [toolsData, posts, siteSettings] = await Promise.all([
+  const illustrationPath = path.join(process.cwd(), "public", "tools-illustration.png");
+  const hasToolsIllustration = fs.existsSync(illustrationPath);
+
+  const [toolsData, posts, siteSettings, projects] = await Promise.all([
     getToolsData(),
     getPublishedPosts(),
     getSiteSettings(),
+    getPublishedProjects(),
   ]);
 
   const formattedArticles = posts.map((p) => ({
@@ -58,18 +69,11 @@ export default async function Home() {
         {/* 3. About Section */}
         {visibility.about !== false && (
           <About
-            heading="DESIGNER &amp; BUILDER ."
-            statement={
-              siteSettings.about_content?.philosophy ||
-              siteSettings.hero_intro ||
-              "I design thoughtful digital experiences and build AI-powered products."
-            }
-            secondary={
-              siteSettings.about_content?.background ||
-              "Bridging product strategy and hands-on technical execution, I transform complex ideas into intuitive design systems and working software with modern frontend frameworks and generative AI stacks."
-            }
-            focusTag="UI/UX &amp; PRODUCT DESIGN"
-            executionTag="AI PROTOTYPING &amp; ENGINEERING"
+            heading="DESIGNER & BUILDER"
+            statement="I design clean, functional interfaces and build working web applications with AI capabilities."
+            secondary="I turn product ideas into testable prototypes and responsive websites using Figma, Next.js, and Supabase. Everything is built with clear typography, fast interaction, and clean frontend code."
+            focusTag="Focus: UI/UX"
+            executionTag="Build: AI apps, full-stack"
           />
         )}
 
@@ -78,16 +82,17 @@ export default async function Home() {
           <ToolsSection
             categories={toolsData.categories}
             tools={toolsData.tools}
+            hasIllustration={hasToolsIllustration}
           />
         )}
 
-        {/* 5. Project Galleries */}
+        {/* 5. Unified Work Section (Product builds & UX case studies) */}
         {(visibility.ai_products !== false || visibility.ux_ui_projects !== false) && (
-          <ProjectGalleries />
+          <WorkSection projects={projects} />
         )}
 
-        {/* 6. Labs & Build Logs */}
-        {visibility.build_logs !== false && (
+        {/* 6. Labs & Build Logs (Rendered only when real articles exist) */}
+        {visibility.build_logs !== false && formattedArticles.length > 0 && (
           <LabsSection articles={formattedArticles} />
         )}
 
@@ -102,7 +107,7 @@ export default async function Home() {
       </main>
 
       {/* 8. Footer */}
-      <Footer showResume={showResume} />
+      <Footer />
     </div>
   );
 }

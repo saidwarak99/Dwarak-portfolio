@@ -2,7 +2,7 @@
 // Typed Supabase Database Access Layer (Phase 2.3)
 // Provides resilient fallbacks so the public site runs without an active database
 // ==============================================================================
-import { createClient } from "./server";
+import { createPublicClient } from "./server";
 import type {
   Project,
   SiteSettings,
@@ -60,8 +60,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     connect_asset_url: "/images/character/sai-standing.png",
   },
   resume_url: null,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
 };
 
 export const DEFAULT_TOOL_CATEGORIES: ToolCategory[] = [
@@ -95,7 +95,7 @@ export const DEFAULT_TOOLS: Tool[] = [
  * Fetch public site settings singleton.
  */
 export async function getSiteSettings(): Promise<SiteSettings> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   if (!supabase) return DEFAULT_SITE_SETTINGS;
 
   try {
@@ -118,7 +118,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
  * Strictly respects empty state when no projects are published.
  */
 export async function getPublishedProjects(category?: string): Promise<Project[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   if (!supabase) return [];
 
   try {
@@ -146,7 +146,7 @@ export async function getPublishedProjects(category?: string): Promise<Project[]
  * Strictly respects empty state when no posts are published.
  */
 export async function getPublishedPosts(): Promise<Post[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   if (!supabase) return [];
 
   try {
@@ -171,7 +171,7 @@ export async function getToolsData(): Promise<{
   categories: ToolCategory[];
   tools: Tool[];
 }> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   if (!supabase) {
     return {
       categories: DEFAULT_TOOL_CATEGORIES,

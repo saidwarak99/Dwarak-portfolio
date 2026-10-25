@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 interface NavItem {
   name: string;
@@ -13,9 +12,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "ABOUT", href: "#about" },
   { name: "TOOLS", href: "#tools" },
-  { name: "PRODUCTS", href: "#ai-products" },
-  { name: "UX/UI", href: "#ux-projects" },
-  { name: "LABS", href: "#labs" },
+  { name: "WORK", href: "#work" },
   { name: "CONTACT", href: "#contact" },
 ];
 
@@ -23,7 +20,7 @@ interface NavbarProps {
   showResume?: boolean;
 }
 
-export function Navbar({ showResume = false }: NavbarProps) {
+export function Navbar({}: NavbarProps) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
@@ -146,11 +143,12 @@ export function Navbar({ showResume = false }: NavbarProps) {
 
         {/* Right Action Bar */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Status Badge */}
-          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 border border-[#230D10] bg-[#FFF7F5] text-[11px] font-mono font-bold text-[#230D10]">
-            <span className="w-2 h-2 rounded-full bg-[#EC2929] animate-pulse" />
-            <span>AI &amp; UX LABS</span>
-          </div>
+          <a
+            href="#contact"
+            className="hidden sm:inline-flex items-center px-4 py-1.5 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm focus-visible:ring-2 focus-visible:ring-[#EC2929]"
+          >
+            Connect
+          </a>
 
           {/* Mobile Hamburger Button */}
           <button
@@ -181,11 +179,9 @@ export function Navbar({ showResume = false }: NavbarProps) {
               {item.name}
             </a>
           ))}
-          <div className="pt-2 border-t border-[#E8CEC9] flex justify-between items-center text-xs font-mono text-[#6B4D52]">
-            <span>SAI DWARAK © 2026</span>
-            <span className="flex items-center gap-1 text-[#EC2929]">
-              <Sparkles className="w-3 h-3" /> ACTIVE
-            </span>
+          <div className="pt-2 border-t border-[#E8CEC9] flex justify-between items-center text-xs font-mono text-[#4A2E33]">
+            <span>SAI DWARAK · HYDERABAD</span>
+            <span className="text-[#EC2929] font-bold">2026</span>
           </div>
         </div>
       )}
