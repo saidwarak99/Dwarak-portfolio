@@ -12,12 +12,14 @@ import {
   Eye,
   Edit,
 } from "lucide-react";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { assertServerAdmin } from "@/lib/auth";
 
 export const instant = false;
 
 export default async function AdminDashboardOverviewPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

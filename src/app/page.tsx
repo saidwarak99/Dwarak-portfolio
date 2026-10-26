@@ -52,12 +52,12 @@ export default async function Home() {
   const showResume = Boolean(visibility.resume && siteSettings.resume_url);
 
   return (
-    <div className="min-h-screen bg-[#FFF7F5] flex flex-col selection:bg-[#EC2929] selection:text-white">
+    <div className="min-h-screen bg-[#FFF7F5] flex flex-col selection:bg-[#EC2929] selection:text-white overflow-x-hidden w-full max-w-full">
       {/* 1. Header & Navigation */}
       <Navbar showResume={showResume} />
 
       {/* Main Content Flow */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {/* 2. Hero Section */}
         <Hero
           ownerName={siteSettings.display_name?.toUpperCase() || "SAI DWARAK"}

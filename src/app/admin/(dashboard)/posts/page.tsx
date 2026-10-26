@@ -1,5 +1,6 @@
 import React from "react";
 import { BookOpen } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import PostsManager from "@/components/admin/PostsManager";
@@ -7,6 +8,7 @@ import PostsManager from "@/components/admin/PostsManager";
 export const instant = false;
 
 export default async function AdminPostsPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

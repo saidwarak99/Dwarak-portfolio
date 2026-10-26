@@ -14,10 +14,9 @@ import {
   AlertTriangle,
   Code2,
 } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-
-export const instant = false;
 
 interface PreviewProjectPageProps {
   params: Promise<{
@@ -25,7 +24,10 @@ interface PreviewProjectPageProps {
   }>;
 }
 
+export const instant = false;
+
 export default async function PreviewProjectPage({ params }: PreviewProjectPageProps) {
+  await connection();
   await assertServerAdmin();
   const { id } = await params;
 

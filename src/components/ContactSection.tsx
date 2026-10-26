@@ -29,13 +29,13 @@ export function ContactSection({
   const cleanGithub = github.replace(/^https?:\/\/(www\.)?/, "");
 
   return (
-    <section id="contact" aria-label="Contact Section" className="pt-20 pb-20 bg-[#FFF7F5] relative">
+    <section id="contact" aria-label="Contact Section" className="pt-14 pb-14 sm:pt-20 sm:pb-20 bg-[#FFF7F5] relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Main Box - Corner brackets removed (reserved for hero and project cards) */}
-        <div className="border-2 border-[#230D10] bg-[#FFF7F5] p-6 sm:p-8 md:p-10 brutalist-shadow-lg">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-start">
-            {/* Left Column: Title & Intro (guaranteed clearance, zero overlap) */}
-            <div className="min-w-0 w-full space-y-4">
+        {/* Main Box - Clean responsive padding */}
+        <div className="border-2 border-[#230D10] bg-[#FFF7F5] p-4 sm:p-8 md:p-10 brutalist-shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 items-start">
+            {/* Left Column: Title & Intro */}
+            <div className="min-w-0 w-full space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-[#EC2929] inline-block" />
                 <span className="text-xs font-mono font-bold tracking-widest text-[#230D10] uppercase">
@@ -43,9 +43,9 @@ export function ContactSection({
                 </span>
               </div>
 
-              {/* Fluid clamp heading sized to guarantee generous clearance from cards */}
+              {/* Fluid heading sized to guarantee generous clearance without clipping */}
               <h2
-                className="text-[clamp(1.85rem,3.4vw,3.25rem)] font-black uppercase tracking-tight leading-[0.92] break-words"
+                className="text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-tight leading-[0.95] break-words"
                 style={{
                   fontFamily: "var(--font-syne)",
                   overflowWrap: "break-word",
@@ -53,17 +53,17 @@ export function ContactSection({
                 }}
               >
                 <span className="block text-[#EC2929]">LET&apos;S</span>
-                <span className="block text-[#230D10] whitespace-nowrap">CONNECT.</span>
+                <span className="block text-[#230D10]">CONNECT.</span>
               </h2>
 
-              <p className="text-sm sm:text-base text-[#4A2E33] leading-relaxed max-w-md pt-2">
+              <p className="text-xs sm:text-sm md:text-base text-[#4A2E33] leading-relaxed max-w-md pt-1 sm:pt-2">
                 Open to design and AI product roles, freelance, and collaborations. Email is the fastest way.
               </p>
 
-              <div className="pt-2">
+              <div className="pt-1 sm:pt-2">
                 <a
                   href={`mailto:${email}`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm focus-visible:ring-2 focus-visible:ring-[#230D10]"
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm focus-visible:ring-2 focus-visible:ring-[#230D10] text-center"
                 >
                   <Mail className="w-4 h-4" />
                   <span>Email me</span>

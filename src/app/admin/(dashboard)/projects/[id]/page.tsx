@@ -9,13 +9,12 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import ProjectForm from "@/components/admin/ProjectForm";
 import CaseStudyBlocksEditor from "@/components/admin/CaseStudyBlocksEditor";
 import type { Database } from "@/types/database.types";
-
-export const instant = false;
 
 interface EditProjectPageProps {
   params: Promise<{
@@ -23,7 +22,10 @@ interface EditProjectPageProps {
   }>;
 }
 
+export const instant = false;
+
 export default async function EditProjectPage({ params }: EditProjectPageProps) {
+  await connection();
   await assertServerAdmin();
   const { id } = await params;
 

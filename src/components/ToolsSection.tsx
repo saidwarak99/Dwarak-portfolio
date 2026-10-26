@@ -222,10 +222,10 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
       : allTools.filter((t) => t.category === activeTab);
 
   return (
-    <section id="tools" aria-label="Tools Section" className="pt-20 pb-0 bg-[#FFF7F5] relative">
+    <section id="tools" aria-label="Tools Section" className="pt-14 pb-0 sm:pt-20 bg-[#FFF7F5] relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        {/* Header Title: Varied formula (Numbered label, no pill, single count) */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10 border-b-2 border-[#230D10] pb-6">
+        {/* Header Title & Filter Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 sm:gap-6 mb-8 sm:mb-10 border-b-2 border-[#230D10] pb-5 sm:pb-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-[#EC2929] inline-block" />
@@ -234,31 +234,28 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
               </span>
             </div>
             <h2
-              className="text-[clamp(2.5rem,5.5vw,5rem)] font-black text-[#230D10] uppercase tracking-tight leading-[0.92]"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-[#230D10] uppercase tracking-tight leading-[0.95]"
               style={{ fontFamily: "var(--font-syne)" }}
             >
-              TOOLS I <span className="whitespace-nowrap">USE.</span>
+              TOOLS I USE.
             </h2>
           </div>
 
-          {/* Rebalanced Category Filter Tabs: All, Design, Frontend, AI, Prototyping */}
+          {/* Clean Category Filter Tabs: Scrollable on mobile, flex on tablet/desktop */}
           <div
-            className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs font-mono font-bold w-full sm:w-auto"
+            className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap w-full sm:w-auto"
             role="tablist"
             aria-label="Filter tools by category"
           >
             {simplifiedCategories.map((cat) => {
               const isActive = activeTab === cat.id;
-              const isPrototyping = cat.id === "prototyping";
               return (
                 <button
                   key={cat.id}
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(cat.id)}
-                  className={`px-3 py-2 border-2 border-[#230D10] uppercase transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] text-center whitespace-nowrap ${
-                    isPrototyping ? "col-span-2 sm:col-span-1" : "col-span-1"
-                  } ${
+                  className={`px-3 py-1.5 sm:px-3.5 sm:py-2 border-2 border-[#230D10] uppercase text-[11px] sm:text-xs font-mono font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] text-center whitespace-nowrap flex-shrink-0 sm:flex-shrink ${
                     isActive
                       ? "bg-[#230D10] text-[#FFF7F5] brutalist-shadow-sm translate-x-0.5 translate-y-0.5"
                       : "bg-[#FFF7F5] text-[#230D10] hover:bg-[#F5D9D5]"
@@ -272,10 +269,10 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
         </div>
 
         {/* Content Grid: Left Illustration Card + Right Tools Directory */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-stretch">
           {/* Left Column: Workflow Engine Card with tools-illustration placeholder */}
-          <div className="lg:col-span-4 flex flex-col min-w-0">
-            <div className="relative flex-1 border-2 border-[#230D10] bg-[#FFF7F5] p-6 flex flex-col justify-between items-center text-center brutalist-shadow-lg">
+          <div className="md:col-span-5 lg:col-span-4 flex flex-col min-w-0">
+            <div className="relative flex-1 border-2 border-[#230D10] bg-[#FFF7F5] p-5 sm:p-6 flex flex-col justify-between items-center text-center brutalist-shadow-lg">
               {/* Card Header (Duplicate count removed, single count maintained in section header) */}
               <div className="w-full flex justify-between items-center text-xs font-mono font-bold border-b border-[#230D10] pb-3 text-[#230D10]">
                 <span>WORKFLOW ENGINE</span>
@@ -283,13 +280,14 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
               </div>
 
               {/* Replacement Illustration Slot: /tools-illustration.png with graceful pink fallback */}
-              <div className="my-6 w-full flex-1 flex flex-col items-center justify-center">
+              <div className="my-4 sm:my-6 w-full flex-1 flex flex-col items-center justify-center">
                 {hasIllustration && !illustrationError ? (
                   <div className="relative w-full aspect-[4/5] max-w-[260px] flex items-center justify-center">
                     <Image
                       src="/tools-illustration.png"
                       alt="Sai Dwarak tools workflow illustration"
                       fill
+                      sizes="260px"
                       className="object-contain"
                       onError={() => setIllustrationError(true)}
                     />
@@ -315,10 +313,10 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
           </div>
 
           {/* Right Column: Stack Directory Grid */}
-          <div className="lg:col-span-8 flex flex-col min-w-0">
+          <div className="md:col-span-7 lg:col-span-8 flex flex-col min-w-0">
             <div className="border-2 border-[#230D10] bg-white p-4 sm:p-6 brutalist-shadow-lg flex-1">
-              {/* Grid of Tools: 13th item spans 2 columns on 2-col view to keep grid balanced */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity duration-200">
+              {/* Grid of Tools: 1-col on mobile/tablet, 2-col on desktop */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 transition-opacity duration-200">
                 {filteredTools.map((tool, idx) => {
                   const isLastOddItem =
                     filteredTools.length % 2 === 1 && idx === filteredTools.length - 1;
@@ -326,7 +324,7 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
                     <div
                       key={tool.name}
                       className={`flex items-center justify-between p-3.5 border-2 border-[#230D10] bg-[#FFF7F5] hover:bg-[#F5D9D5] transition-all group brutalist-shadow-sm hover:translate-x-0.5 hover:translate-y-0.5 ${
-                        isLastOddItem ? "sm:col-span-2" : ""
+                        isLastOddItem ? "lg:col-span-2" : ""
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">

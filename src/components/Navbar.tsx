@@ -179,6 +179,15 @@ export function Navbar({}: NavbarProps) {
               {item.name}
             </a>
           ))}
+          <div className="pt-2">
+            <a
+              href="#contact"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block w-full py-2.5 px-4 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider text-center border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm"
+            >
+              Connect with me
+            </a>
+          </div>
           <div className="pt-2 border-t border-[#E8CEC9] flex justify-between items-center text-xs font-mono text-[#4A2E33]">
             <span>SAI DWARAK · HYDERABAD</span>
             <span className="text-[#EC2929] font-bold">2026</span>

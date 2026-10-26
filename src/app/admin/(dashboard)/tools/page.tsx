@@ -1,5 +1,6 @@
 import React from "react";
 import { Wrench } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import ToolsManager from "@/components/admin/ToolsManager";
@@ -7,6 +8,7 @@ import ToolsManager from "@/components/admin/ToolsManager";
 export const instant = false;
 
 export default async function AdminToolsPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

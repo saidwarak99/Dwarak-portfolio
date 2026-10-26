@@ -2,11 +2,10 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Eye, ExternalLink } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import PostForm from "@/components/admin/PostForm";
-
-export const instant = false;
 
 interface EditPostPageProps {
   params: Promise<{
@@ -14,7 +13,10 @@ interface EditPostPageProps {
   }>;
 }
 
+export const instant = false;
+
 export default async function EditPostPage({ params }: EditPostPageProps) {
+  await connection();
   await assertServerAdmin();
   const { id } = await params;
 

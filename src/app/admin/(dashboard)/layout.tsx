@@ -13,6 +13,7 @@ import {
   LogOut,
   AlertTriangle,
 } from "lucide-react";
+import { connection } from "next/server";
 import { getAuthenticatedAdmin, getSessionUser } from "@/lib/auth";
 import { signOutAction } from "@/lib/actions/auth";
 
@@ -23,6 +24,7 @@ export default async function AdminDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   const admin = await getAuthenticatedAdmin();
 
   // 1. If no authenticated admin, inspect if user is logged in as non-admin

@@ -353,3 +353,134 @@ export async function updateMediaMetadataAction(
   revalidatePath("/admin/media");
   return { success: true, asset: data as MediaAsset };
 }
+
+export interface RecordDirectUploadInput {
+  bucket_id: string;
+  storage_path: string;
+  url: string;
+  format: string;
+  bytes: number;
+  resource_type: "image" | "document";
+  access_mode: "public" | "private";
+  alt_text?: string | null;
+  caption?: string | null;
+  folder?: string | null;
+}
+
+/**
+ * Server Action: Records metadata for an asset uploaded directly to Supabase Storage.
+ * Verifies admin privileges and metadata safety.
+ * If database insert fails, automatically removes the uploaded storage object to prevent orphans.
+ */
+export async function recordDirectUploadAction(
+  input: RecordDirectUploadInput
+): Promise<MediaUploadResult> {
+  try {
+    await assertServerAdmin();
+  } catch {
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const supabase = await createClient();
+  if (!supabase) return { success: false, error: "Database client unconfigured." };
+
+  const validBuckets = [STORAGE_BUCKETS.PUBLIC, STORAGE_BUCKETS.PRIVATE];
+  if (!validBuckets.includes(input.bucket_id as any)) {
+    return { success: false, error: "Invalid storage bucket." };
+  }
+
+  const isDocument = input.resource_type === "document" || input.format === "application/pdf";
+  const validation = validateAsset(input.format, input.bytes, isDocument, input.access_mode);
+  if (!validation.valid) {
+    await supabase.storage.from(input.bucket_id).remove([input.storage_path]);
+    return { success: false, error: validation.error };
+  }
+
+  if (!input.storage_path || input.storage_path.includes("..") || input.storage_path.startsWith("/")) {
+    await supabase.storage.from(input.bucket_id).remove([input.storage_path]);
+    return { success: false, error: "Invalid storage path detected." };
+  }
+
+  let resolvedUrl = input.url;
+  if (input.access_mode === "public") {
+    const { data: urlData } = supabase.storage
+      .from(STORAGE_BUCKETS.PUBLIC)
+      .getPublicUrl(input.storage_path);
+    resolvedUrl = urlData.publicUrl;
+  } else {
+    resolvedUrl = `storage://${STORAGE_BUCKETS.PRIVATE}/${input.storage_path}`;
+  }
+
+  try {
+    const cleanFolder = (input.folder || "uploads")
+      .replace(/[^a-zA-Z0-9_-]/g, "")
+      .replace(/^_+|_+$/g, "") || "uploads";
+
+    const { data: assetData, error: dbError } = await supabase
+      .from("media_assets")
+      .insert({
+        bucket_id: input.bucket_id,
+        storage_path: input.storage_path,
+        url: resolvedUrl,
+        format: input.format,
+        bytes: input.bytes,
+        resource_type: isDocument ? "document" : "image",
+        access_mode: input.access_mode,
+        alt_text: input.alt_text?.trim() || null,
+        caption: input.caption?.trim() || null,
+        folder: cleanFolder,
+      })
+      .select()
+      .single();
+
+    if (dbError || !assetData) {
+      console.error("[recordDirectUploadAction] DB insert failed, rolling back storage object:", dbError);
+      await supabase.storage.from(input.bucket_id).remove([input.storage_path]);
+      return { success: false, error: `Failed to record asset metadata: ${dbError?.message}` };
+    }
+
+    revalidatePath("/admin/media");
+    revalidatePath("/admin/settings");
+    revalidatePath("/admin/projects");
+    revalidatePath("/");
+    return { success: true, asset: assetData as MediaAsset };
+  } catch (err) {
+    await supabase.storage.from(input.bucket_id).remove([input.storage_path]);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unexpected database error recording asset.",
+    };
+  }
+}
+
+/**
+ * Server Action: Fetch all public image assets for project cover selection.
+ * Exclusively queries assets where access_mode = 'public' and resource_type = 'image'.
+ */
+export async function getPublicMediaAssetsAction(): Promise<{
+  success: boolean;
+  assets: MediaAsset[];
+  error?: string;
+}> {
+  try {
+    await assertServerAdmin();
+  } catch {
+    return { success: false, assets: [], error: "Unauthorized. Admin privileges required." };
+  }
+
+  const supabase = await createClient();
+  if (!supabase) return { success: false, assets: [], error: "Database client unconfigured." };
+
+  const { data, error } = await supabase
+    .from("media_assets")
+    .select("*")
+    .eq("access_mode", "public")
+    .eq("resource_type", "image")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { success: false, assets: [], error: error.message };
+  }
+
+  return { success: true, assets: (data as MediaAsset[]) || [] };
+}

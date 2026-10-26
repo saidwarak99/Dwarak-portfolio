@@ -34,7 +34,7 @@ export async function createProjectAction(data: {
   content?: string;
   project_type?: string;
   role?: string;
-  cover_image?: string;
+  cover_image?: string | null;
   status?: "concept" | "in_progress" | "completed" | "archived";
   is_published?: boolean;
   is_featured?: boolean;
@@ -116,7 +116,7 @@ export async function updateProjectAction(
     content?: string;
     project_type?: string;
     role?: string;
-    cover_image?: string;
+    cover_image?: string | null;
     status?: "concept" | "in_progress" | "completed" | "archived";
     is_published?: boolean;
     is_featured?: boolean;
@@ -143,7 +143,9 @@ export async function updateProjectAction(
   if (data.content !== undefined) updatePayload.content = data.content;
   if (data.project_type !== undefined) updatePayload.project_type = data.project_type;
   if (data.role !== undefined) updatePayload.role = data.role;
-  if (data.cover_image !== undefined) updatePayload.cover_image = data.cover_image;
+  if (data.cover_image !== undefined) {
+    updatePayload.cover_image = data.cover_image && data.cover_image.trim() ? data.cover_image.trim() : null;
+  }
   if (data.status !== undefined) updatePayload.status = data.status;
   if (data.is_featured !== undefined) updatePayload.is_featured = data.is_featured;
   if (data.display_order !== undefined) updatePayload.display_order = Number(data.display_order);

@@ -1,12 +1,14 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft, FolderKanban } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import ProjectForm from "@/components/admin/ProjectForm";
 
 export const instant = false;
 
 export default async function NewProjectPage() {
+  await connection();
   await assertServerAdmin();
 
   return (

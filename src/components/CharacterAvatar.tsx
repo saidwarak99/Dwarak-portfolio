@@ -53,10 +53,10 @@ export function CharacterAvatar({
 
   // Responsive dimension classes
   const sizeClasses = {
-    sm: "w-20 sm:w-24 max-h-[140px]",
-    md: "w-32 sm:w-44 md:w-56 max-h-[280px]",
-    lg: "w-44 sm:w-56 md:w-72 max-h-[380px]",
-    xl: "w-56 sm:w-72 md:w-80 max-h-[480px]",
+    sm: "w-16 sm:w-20 md:w-24 max-h-[120px] sm:max-h-[140px]",
+    md: "w-28 sm:w-40 md:w-56 max-h-[170px] sm:max-h-[230px] md:max-h-[290px]",
+    lg: "w-36 sm:w-48 md:w-64 max-h-[250px] sm:max-h-[330px] md:max-h-[380px]",
+    xl: "w-48 sm:w-60 md:w-72 max-h-[330px] sm:max-h-[410px] md:max-h-[480px]",
   };
 
   return (

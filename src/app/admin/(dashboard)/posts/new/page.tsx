@@ -1,12 +1,14 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import PostForm from "@/components/admin/PostForm";
 
 export const instant = false;
 
 export default async function NewPostPage() {
+  await connection();
   await assertServerAdmin();
 
   return (

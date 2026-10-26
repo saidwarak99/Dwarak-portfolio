@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   UploadCloud,
@@ -21,10 +21,14 @@ import {
 } from "lucide-react";
 import {
   uploadMediaAction,
+  recordDirectUploadAction,
   deleteMediaAction,
   moveMediaAccessModeAction,
   getSignedUrlAction,
+  type MediaUploadResult,
 } from "@/lib/actions/media";
+import { createClient } from "@/lib/supabase/client";
+import { sanitizeStorageFilename } from "@/lib/storage/validation";
 import type { MediaAsset } from "@/types/database.types";
 
 interface MediaManagerProps {
@@ -48,6 +52,10 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
   // Upload modal / state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState<string>("");
   const [uploadMode, setUploadMode] = useState<"public" | "private">("public");
   const [uploadFolder, setUploadFolder] = useState("uploads");
   const [uploadAlt, setUploadAlt] = useState("");
@@ -55,24 +63,108 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Signed URL modal / state
   const [signedUrlData, setSignedUrlData] = useState<{ id: string; url: string; expiresAt: string } | null>(null);
 
   // Copy feedback state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Failed image previews fallback tracking
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
   // Pending transitions
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
 
+  // Object URL lifecycle for selected file preview
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    if (selectedFile.type.startsWith("image/")) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
+
+  // Validation helper
+  const validateSelectedFile = (file: File): string | null => {
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      return "SVG uploads are disabled for security reasons (stored XSS prevention). Please choose a raster image (PNG, JPEG, WebP, GIF) or PDF document.";
+    }
+
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const allowedImages = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
+    if (isPdf) {
+      if (file.size > 20 * 1024 * 1024) {
+        return "PDF document exceeds the 20 MB size limit.";
+      }
+    } else {
+      if (!allowedImages.includes(file.type)) {
+        return `Unsupported file format (${file.type || "unknown"}). Only PNG, JPEG, WebP, GIF, and PDF files are allowed.`;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        return "Image file exceeds the 10 MB size limit.";
+      }
+    }
+
+    return null;
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    const err = validateSelectedFile(file);
+    if (err) {
+      setUploadError(err);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setSelectedFile(file);
+    setUploadError(null);
+  };
+
+  // Drag-and-drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
   // Filtered Assets
   const filteredAssets = assets.filter((asset) => {
-    // Mode filter
     if (filterMode !== "all" && asset.access_mode !== filterMode) return false;
-    // Type filter
     if (filterType !== "all" && asset.resource_type !== filterType) return false;
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const filename = asset.storage_path.toLowerCase();
@@ -96,32 +188,87 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
       return;
     }
 
+    const validationErr = validateSelectedFile(selectedFile);
+    if (validationErr) {
+      setUploadError(validationErr);
+      return;
+    }
+
     setUploadError(null);
     setUploadSuccess(null);
+    setIsUploading(true);
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("access_mode", uploadMode);
-    formData.append("folder", uploadFolder);
-    formData.append("alt_text", uploadAlt);
-    formData.append("caption", uploadCaption);
+    try {
+      const client = createClient();
+      let res: MediaUploadResult;
 
-    startTransition(async () => {
-      const res = await uploadMediaAction(formData);
+      const cleanFolder = uploadFolder
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .replace(/^_+|_+$/g, "") || "uploads";
+      const sanitizedFilename = sanitizeStorageFilename(selectedFile.name);
+      const storagePath = `${cleanFolder}/${Date.now()}-${sanitizedFilename}`;
+      const targetBucket = uploadMode === "private" ? "portfolio-private" : "portfolio-public";
+
+      if (client) {
+        setUploadStatusText(`Uploading to ${targetBucket}...`);
+        const { error: uploadErr } = await client.storage
+          .from(targetBucket)
+          .upload(storagePath, selectedFile, {
+            contentType: selectedFile.type,
+            upsert: false,
+          });
+
+        if (uploadErr) {
+          throw new Error(`Storage upload error: ${uploadErr.message}`);
+        }
+
+        setUploadStatusText("Recording asset metadata...");
+        res = await recordDirectUploadAction({
+          bucket_id: targetBucket,
+          storage_path: storagePath,
+          url: "",
+          format: selectedFile.type,
+          bytes: selectedFile.size,
+          resource_type: selectedFile.type === "application/pdf" ? "document" : "image",
+          access_mode: uploadMode,
+          alt_text: uploadAlt,
+          caption: uploadCaption,
+          folder: cleanFolder,
+        });
+      } else {
+        // Fallback to server action
+        setUploadStatusText("Uploading via server action...");
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("access_mode", uploadMode);
+        formData.append("folder", cleanFolder);
+        formData.append("alt_text", uploadAlt);
+        formData.append("caption", uploadCaption);
+        res = await uploadMediaAction(formData);
+      }
+
       if (res.success && res.asset) {
         setAssets((prev) => [res.asset!, ...prev]);
-        setUploadSuccess(`Uploaded "${selectedFile.name}" successfully.`);
+        setUploadSuccess(`Uploaded "${selectedFile.name}" successfully to ${uploadMode === "private" ? "portfolio-private" : "portfolio-public"}.`);
         setSelectedFile(null);
         setUploadAlt("");
         setUploadCaption("");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         setTimeout(() => {
           setIsUploadOpen(false);
           setUploadSuccess(null);
+          setUploadStatusText("");
         }, 1200);
       } else {
-        setUploadError(res.error || "Upload failed.");
+        setUploadError(res.error || "Upload failed. Please check file format and administrative permissions.");
       }
-    });
+    } catch (err) {
+      console.error("[MediaManager] Upload error:", err);
+      setUploadError(err instanceof Error ? err.message : "An unexpected upload error occurred. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -218,7 +365,11 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
 
           {/* Upload Button */}
           <button
-            onClick={() => setIsUploadOpen(true)}
+            onClick={() => {
+              setIsUploadOpen(true);
+              setUploadError(null);
+              setUploadSuccess(null);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm"
           >
             <UploadCloud className="w-4 h-4" />
@@ -248,27 +399,19 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
           </h3>
           <p className="text-xs font-mono text-[#4A2E33] max-w-md mx-auto">
             {assets.length === 0
-              ? "Your portfolio storage is currently empty. Upload images or documents to populate your media library."
-              : "No assets match your current search and filter criteria. Try adjusting your query."}
+              ? "Your storage buckets are currently empty. Upload your first raster image or PDF document above."
+              : "No assets match your search query or active filter settings. Try adjusting the filters."}
           </p>
-          {assets.length === 0 && (
-            <button
-              onClick={() => setIsUploadOpen(true)}
-              className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#230D10] text-[#FFF7F5] text-xs font-mono font-bold uppercase hover:bg-[#EC2929] transition-colors"
-            >
-              <FileUp className="w-4 h-4" />
-              <span>Upload First Asset</span>
-            </button>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAssets.map((asset) => {
-            const isPublic = asset.access_mode === "public";
             const isImage = asset.resource_type === "image";
+            const isPublic = asset.access_mode === "public";
             const filename = asset.storage_path.split("/").pop() || asset.storage_path;
             const isDeleting = deletingId === asset.id;
             const isMoving = movingId === asset.id;
+            const hasLoadFailed = failedImages[asset.id];
 
             return (
               <div
@@ -278,14 +421,26 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                 {/* Preview Box */}
                 <div className="relative w-full h-48 bg-[#FFF7F5] border-b-2 border-[#230D10] flex items-center justify-center overflow-hidden">
                   {isImage && isPublic ? (
-                    <Image
-                      src={asset.url}
-                      alt={asset.alt_text || filename}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-contain p-2"
-                      unoptimized={asset.format?.includes("svg")}
-                    />
+                    hasLoadFailed ? (
+                      <div className="text-center p-4 space-y-2">
+                        <AlertCircle className="w-8 h-8 text-[#EC2929] mx-auto" />
+                        <span className="text-[10px] font-mono font-bold text-[#4A2E33] block">
+                          Preview Unavailable
+                        </span>
+                      </div>
+                    ) : (
+                      <Image
+                        src={asset.url}
+                        alt={asset.alt_text || filename}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-contain p-2"
+                        unoptimized={asset.format?.includes("svg")}
+                        onError={() => {
+                          setFailedImages((prev) => ({ ...prev, [asset.id]: true }));
+                        }}
+                      />
+                    )
                   ) : isImage && !isPublic ? (
                     <div className="text-center p-4 space-y-2">
                       <div className="w-10 h-10 mx-auto border-2 border-[#230D10] bg-[#FFF0F0] flex items-center justify-center text-[#EC2929]">
@@ -348,71 +503,80 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                     >
                       {filename}
                     </h4>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[#4A2E33]">
+                      <span>{formatBytes(asset.bytes)}</span>
+                      <span className="uppercase">{asset.format || "unknown"}</span>
+                    </div>
                     {asset.alt_text && (
-                      <p className="text-[11px] font-mono text-[#4A2E33] line-clamp-1">
-                        Alt: {asset.alt_text}
+                      <p className="text-[10px] font-mono text-[#4A2E33] italic truncate">
+                        Alt: &quot;{asset.alt_text}&quot;
                       </p>
                     )}
-                    <div className="flex items-center justify-between text-[10px] font-mono text-[#4A2E33] pt-1 border-t border-[#E8CEC9]">
-                      <span>{formatBytes(asset.bytes)}</span>
-                      <span>{new Date(asset.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-[10px] font-mono text-[#8A6A70] truncate" title={asset.storage_path}>
-                      Bucket: {asset.bucket_id}
-                    </div>
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Storage Path Box & Actions */}
                   <div className="space-y-2 pt-2 border-t border-[#230D10]/10">
-                    {/* Copy URL / Signed URL */}
-                    {isPublic ? (
+                    <div className="flex items-center justify-between gap-2 bg-[#FFF7F5] border border-[#230D10] px-2 py-1 text-[10px] font-mono">
+                      <span className="truncate text-[#4A2E33]" title={asset.storage_path}>
+                        {asset.storage_path}
+                      </span>
                       <button
-                        onClick={() => handleCopy(asset.url, asset.id)}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FFF7F5] border border-[#230D10] hover:bg-[#230D10] hover:text-white transition-colors text-xs font-mono font-bold"
+                        onClick={() => handleCopy(isPublic ? asset.url : asset.storage_path, asset.id)}
+                        className="p-1 hover:text-[#EC2929] transition-colors flex-shrink-0"
+                        title={isPublic ? "Copy public CDN URL" : "Copy storage path"}
                       >
                         {copiedId === asset.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-[#166534]" />
-                            <span className="text-[#166534]">URL Copied!</span>
-                          </>
+                          <Check className="w-3.5 h-3.5 text-[#166534]" />
                         ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Copy Public URL</span>
-                          </>
+                          <Copy className="w-3.5 h-3.5" />
                         )}
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleGenerateSignedUrl(asset.id)}
-                        disabled={isPending}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FFF0F0] border border-[#EC2929] hover:bg-[#EC2929] hover:text-white text-[#EC2929] transition-colors text-xs font-mono font-bold"
-                      >
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Create Signed URL</span>
-                      </button>
-                    )}
+                    </div>
 
-                    {/* Secondary Row: Move Access Mode & Delete */}
-                    <div className="flex items-center gap-2">
+                    {/* Action Buttons Toolbar */}
+                    <div className="flex items-center justify-between gap-1 pt-1">
+                      {/* Move Access Mode */}
                       <button
-                        onClick={() => handleMoveAccessMode(asset.id, asset.access_mode)}
-                        disabled={isMoving || isPending}
-                        title={isPublic ? "Demote to private bucket" : "Promote to public bucket"}
-                        className="flex-1 inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#230D10] text-[11px] font-mono font-bold text-[#230D10] hover:bg-[#F5D9D5] transition-colors disabled:opacity-50"
+                        onClick={() => handleMoveAccessMode(asset.id, asset.access_mode as any)}
+                        disabled={isMoving || isDeleting}
+                        className="inline-flex items-center gap-1 px-2 py-1 border border-[#230D10] text-[10px] font-mono font-bold uppercase hover:bg-[#FFF7F5] disabled:opacity-50"
+                        title={isPublic ? "Move to private bucket" : "Promote to public bucket"}
                       >
-                        <ArrowRightLeft className="w-3 h-3 text-[#EC2929]" />
+                        {isMoving ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <ArrowRightLeft className="w-3 h-3 text-[#EC2929]" />
+                        )}
                         <span>{isPublic ? "Make Private" : "Make Public"}</span>
                       </button>
 
-                      <button
-                        onClick={() => handleDelete(asset.id, filename)}
-                        disabled={isDeleting || isPending}
-                        title="Delete asset from storage and database"
-                        className="p-1 border border-[#EC2929] text-[#EC2929] hover:bg-[#EC2929] hover:text-white transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {isPublic && (
+                          <a
+                            href={asset.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 border border-[#230D10] hover:bg-[#FFF7F5] text-[#230D10]"
+                            title="Open direct URL in new tab"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(asset.id, filename)}
+                          disabled={isDeleting || isMoving}
+                          className="p-1.5 border border-[#230D10] hover:bg-[#FFF0F0] text-[#EC2929] disabled:opacity-50"
+                          title="Delete asset permanently"
+                        >
+                          {isDeleting ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -425,7 +589,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
       {/* Upload Modal */}
       {isUploadOpen && (
         <div className="fixed inset-0 z-50 bg-[#230D10]/70 flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-[#230D10] max-w-lg w-full brutalist-shadow-lg p-6 space-y-4">
+          <div className="bg-white border-2 border-[#230D10] max-w-lg w-full brutalist-shadow-lg p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b-2 border-[#230D10] pb-3">
               <div className="flex items-center gap-2">
                 <UploadCloud className="w-5 h-5 text-[#EC2929]" />
@@ -434,37 +598,107 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                 </h3>
               </div>
               <button
-                onClick={() => setIsUploadOpen(false)}
-                className="p-1 border border-[#230D10] hover:bg-[#F5D9D5]"
+                onClick={() => {
+                  if (!isUploading) setIsUploadOpen(false);
+                }}
+                disabled={isUploading}
+                className="p-1 border border-[#230D10] hover:bg-[#F5D9D5] disabled:opacity-50"
               >
                 <X className="w-4 h-4 text-[#230D10]" />
               </button>
             </div>
 
             <form onSubmit={handleUploadSubmit} className="space-y-4">
-              {/* File Drop / Select */}
+              {/* Drag-and-Drop / File Picker Dropzone */}
               <div className="space-y-1">
                 <label className="text-xs font-mono font-bold uppercase text-[#230D10] block">
-                  Choose File <span className="text-[#EC2929]">*</span>
+                  Select File <span className="text-[#EC2929]">*</span>
                 </label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
-                    if (f && (f.type === "image/svg+xml" || f.name.toLowerCase().endsWith(".svg"))) {
-                      setUploadError("SVG uploads are disabled for security reasons. Please choose a raster image (PNG, JPEG, WebP, GIF) or PDF document.");
-                      setSelectedFile(null);
-                      return;
-                    }
-                    setSelectedFile(f);
-                    setUploadError(null);
-                  }}
-                  className="w-full p-2 border-2 border-[#230D10] bg-[#FFF7F5] text-xs font-mono text-[#230D10] file:mr-3 file:py-1 file:px-3 file:border file:border-[#230D10] file:bg-[#230D10] file:text-[#FFF7F5] file:text-xs file:font-mono file:font-bold hover:file:bg-[#EC2929]"
-                />
-                <span className="text-[10px] font-mono text-[#4A2E33] block">
-                  Supported formats: Raster Images (PNG, JPEG, WebP, GIF up to 10MB) or Documents (PDF up to 20MB). SVGs are disabled for security.
-                </span>
+
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`p-4 border-2 border-dashed transition-colors text-center relative ${
+                    isDragging
+                      ? "border-[#EC2929] bg-[#FFF0F0]"
+                      : selectedFile
+                      ? "border-[#166534] bg-[#E8F8EE]"
+                      : "border-[#230D10] bg-[#FFF7F5] hover:bg-[#F5D9D5]"
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      handleFileSelect(f);
+                    }}
+                    className="hidden"
+                    id="media-file-input"
+                    disabled={isUploading}
+                  />
+
+                  {selectedFile ? (
+                    <div className="space-y-3">
+                      {previewUrl ? (
+                        <div className="relative w-32 h-32 mx-auto border-2 border-[#230D10] bg-white overflow-hidden brutalist-shadow-sm">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewUrl}
+                            alt="Selected preview"
+                            className="w-full h-full object-contain p-1"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 mx-auto border-2 border-[#230D10] bg-white flex items-center justify-center text-[#EC2929]">
+                          <FileText className="w-8 h-8" />
+                        </div>
+                      )}
+
+                      <div className="text-xs font-mono">
+                        <p className="font-bold text-[#230D10] truncate max-w-xs mx-auto">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-[11px] text-[#4A2E33]">
+                          {formatBytes(selectedFile.size)} • {selectedFile.type || "unknown"}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        disabled={isUploading}
+                        className="inline-flex items-center gap-1 px-3 py-1 border border-[#230D10] bg-white text-[11px] font-mono font-bold uppercase text-[#EC2929] hover:bg-[#FFF0F0] transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                        <span>Choose Different File</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="media-file-input"
+                      className="cursor-pointer block py-4 space-y-2"
+                    >
+                      <div className="w-12 h-12 mx-auto border-2 border-[#230D10] bg-white flex items-center justify-center text-[#EC2929] brutalist-shadow-sm">
+                        <FileUp className="w-6 h-6" />
+                      </div>
+                      <div className="text-xs font-mono">
+                        <span className="font-bold text-[#EC2929] underline">
+                          Click to browse
+                        </span>{" "}
+                        or drag and drop your file here
+                      </div>
+                      <p className="text-[10px] font-mono text-[#4A2E33]">
+                        PNG, JPEG, WebP, GIF (up to 10 MB) or PDF (up to 20 MB)
+                      </p>
+                    </label>
+                  )}
+                </div>
               </div>
 
               {/* Bucket / Access Mode Selection */}
@@ -476,6 +710,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                   <button
                     type="button"
                     onClick={() => setUploadMode("public")}
+                    disabled={isUploading}
                     className={`p-3 border-2 border-[#230D10] text-left transition-colors ${
                       uploadMode === "public"
                         ? "bg-[#E8F8EE] border-[#166534]"
@@ -494,6 +729,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                   <button
                     type="button"
                     onClick={() => setUploadMode("private")}
+                    disabled={isUploading}
                     className={`p-3 border-2 border-[#230D10] text-left transition-colors ${
                       uploadMode === "private"
                         ? "bg-[#FFF0F0] border-[#EC2929]"
@@ -520,6 +756,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                   type="text"
                   value={uploadFolder}
                   onChange={(e) => setUploadFolder(e.target.value)}
+                  disabled={isUploading}
                   placeholder="e.g. projects, avatars, resume, uploads"
                   className="w-full px-3 py-1.5 border-2 border-[#230D10] bg-[#FFF7F5] text-xs font-mono text-[#230D10] focus:outline-none focus:bg-white"
                 />
@@ -534,6 +771,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                   type="text"
                   value={uploadAlt}
                   onChange={(e) => setUploadAlt(e.target.value)}
+                  disabled={isUploading}
                   placeholder="Describe image content for screen readers..."
                   className="w-full px-3 py-1.5 border-2 border-[#230D10] bg-[#FFF7F5] text-xs font-mono text-[#230D10] focus:outline-none focus:bg-white"
                 />
@@ -548,6 +786,7 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                   type="text"
                   value={uploadCaption}
                   onChange={(e) => setUploadCaption(e.target.value)}
+                  disabled={isUploading}
                   placeholder="Optional context or figure caption..."
                   className="w-full px-3 py-1.5 border-2 border-[#230D10] bg-[#FFF7F5] text-xs font-mono text-[#230D10] focus:outline-none focus:bg-white"
                 />
@@ -573,20 +812,20 @@ export function MediaManager({ initialAssets }: MediaManagerProps) {
                 <button
                   type="button"
                   onClick={() => setIsUploadOpen(false)}
-                  disabled={isPending}
-                  className="px-4 py-2 border-2 border-[#230D10] bg-white text-xs font-mono font-bold uppercase hover:bg-[#F5D9D5] transition-colors"
+                  disabled={isUploading}
+                  className="px-4 py-2 border-2 border-[#230D10] bg-white text-xs font-mono font-bold uppercase hover:bg-[#F5D9D5] transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending || !selectedFile}
-                  className="inline-flex items-center gap-2 px-5 py-2 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm disabled:opacity-50"
+                  disabled={isUploading || !selectedFile}
+                  className="inline-flex items-center gap-2 px-5 py-2 bg-[#EC2929] text-white text-xs font-mono font-bold uppercase tracking-wider border-2 border-[#230D10] hover:bg-[#230D10] transition-colors brutalist-shadow-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {isPending ? (
+                  {isUploading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Uploading...</span>
+                      <span>{uploadStatusText || "Uploading..."}</span>
                     </>
                   ) : (
                     <>

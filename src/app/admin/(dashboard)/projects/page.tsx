@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Plus, FolderKanban } from "lucide-react";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { assertServerAdmin } from "@/lib/auth";
 import ProjectsManager from "@/components/admin/ProjectsManager";
@@ -8,6 +9,7 @@ import ProjectsManager from "@/components/admin/ProjectsManager";
 export const instant = false;
 
 export default async function AdminProjectsPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

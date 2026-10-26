@@ -1,5 +1,6 @@
 import React from "react";
 import { Image as ImageIcon, Database as DbIcon, ShieldCheck } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { MediaManager } from "@/components/admin/MediaManager";
@@ -8,6 +9,7 @@ import type { MediaAsset } from "@/types/database.types";
 export const instant = false;
 
 export default async function AdminMediaPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

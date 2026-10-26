@@ -1,5 +1,6 @@
 import React from "react";
 import { Settings as SettingsIcon } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/supabase/queries";
@@ -9,6 +10,7 @@ import type { SiteSettings } from "@/types/database.types";
 export const instant = false;
 
 export default async function AdminSettingsPage() {
+  await connection();
   await assertServerAdmin();
   const supabase = await createClient();
 

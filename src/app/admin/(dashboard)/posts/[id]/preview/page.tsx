@@ -10,10 +10,9 @@ import {
   AlertTriangle,
   BookOpen,
 } from "lucide-react";
+import { connection } from "next/server";
 import { assertServerAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-
-export const instant = false;
 
 interface PreviewPostPageProps {
   params: Promise<{
@@ -108,7 +107,10 @@ function RenderMarkdownLines({ content }: { content: string }) {
   return <div className="space-y-1">{elements}</div>;
 }
 
+export const instant = false;
+
 export default async function PreviewPostPage({ params }: PreviewPostPageProps) {
+  await connection();
   await assertServerAdmin();
   const { id } = await params;
 
