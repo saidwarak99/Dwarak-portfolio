@@ -225,7 +225,7 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
     <section id="tools" aria-label="Tools Section" className="pt-20 pb-0 bg-[#FFF7F5] relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {/* Header Title: Varied formula (Numbered label, no pill, single count) */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 border-b-2 border-[#230D10] pb-6">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10 border-b-2 border-[#230D10] pb-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-[#EC2929] inline-block" />
@@ -241,17 +241,23 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
             </h2>
           </div>
 
-          {/* Simple Category Filter Tabs: All, Design, Frontend, AI, Prototyping */}
-          <div className="flex flex-wrap gap-2 text-xs font-mono font-bold" role="tablist">
+          {/* Rebalanced Category Filter Tabs: All, Design, Frontend, AI, Prototyping */}
+          <div
+            className="grid grid-cols-3 sm:flex sm:flex-wrap sm:items-center gap-2 text-xs font-mono font-bold w-full lg:w-auto"
+            role="tablist"
+          >
             {simplifiedCategories.map((cat) => {
               const isActive = activeTab === cat.id;
+              const isPrototyping = cat.id === "prototyping";
               return (
                 <button
                   key={cat.id}
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(cat.id)}
-                  className={`px-3.5 py-1.5 border-2 border-[#230D10] uppercase transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] ${
+                  className={`px-3 py-1.5 border-2 border-[#230D10] uppercase transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] text-center ${
+                    isPrototyping ? "col-span-2 sm:col-auto" : ""
+                  } ${
                     isActive
                       ? "bg-[#230D10] text-[#FFF7F5] brutalist-shadow-sm translate-x-0.5 translate-y-0.5"
                       : "bg-[#FFF7F5] text-[#230D10] hover:bg-[#F5D9D5]"
@@ -269,10 +275,10 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
           {/* Left Column: Workflow Engine Card with tools-illustration placeholder */}
           <div className="lg:col-span-4 flex flex-col min-w-0">
             <div className="relative flex-1 border-2 border-[#230D10] bg-[#FFF7F5] p-6 flex flex-col justify-between items-center text-center brutalist-shadow-lg">
-              {/* Card Header */}
+              {/* Card Header (Duplicate count removed, single count maintained in section header) */}
               <div className="w-full flex justify-between items-center text-xs font-mono font-bold border-b border-[#230D10] pb-3 text-[#230D10]">
                 <span>WORKFLOW ENGINE</span>
-                <span className="text-[#EC2929]">✦ {allTools.length} TOOLS</span>
+                <span className="text-[#EC2929]">✦ ACTIVE</span>
               </div>
 
               {/* Replacement Illustration Slot: /tools-illustration.png with graceful pink fallback */}

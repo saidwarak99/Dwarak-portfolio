@@ -18,10 +18,10 @@ export function About({
   return (
     <section id="about" aria-label="About Section" className="pt-20 pb-16 bg-[#FFF7F5] relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Asymmetrical Grid: minmax(0, 1.1fr) minmax(0, 1fr) preventing overlap at all breakpoints */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-8 lg:gap-12 items-start">
+        {/* Asymmetrical Grid: minmax(0, 1.15fr) minmax(0, 1fr) preventing overlap at all breakpoints */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-8 lg:gap-14 items-start">
           {/* Left Column: Fluid Headline */}
-          <div className="min-w-0 space-y-4">
+          <div className="min-w-0 w-full space-y-4">
             {/* Clean Section Number / Label (Varied formula, no pill) */}
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-[#EC2929] inline-block" />
@@ -32,8 +32,12 @@ export function About({
 
             {/* Giant Fluid Heading that never clips or underlaps */}
             <h2
-              className="text-[clamp(2.5rem,5.5vw,5rem)] font-black text-[#230D10] leading-[0.92] tracking-tight uppercase break-words"
-              style={{ fontFamily: "var(--font-syne)" }}
+              className="text-[clamp(2.25rem,5vw,4.75rem)] font-black text-[#230D10] leading-[0.92] tracking-tight uppercase break-words"
+              style={{
+                fontFamily: "var(--font-syne)",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
+              }}
             >
               DESIGNER &amp; <span className="whitespace-nowrap">BUILDER.</span>
             </h2>
@@ -44,7 +48,7 @@ export function About({
           </div>
 
           {/* Right Column: Editorial Card with Statement & Pills */}
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <div className="relative border-2 border-[#230D10] bg-[#FFF7F5] p-6 sm:p-8 md:p-10 brutalist-shadow-lg">
               {/* Primary Statement */}
               <p className="text-lg sm:text-xl font-bold text-[#230D10] leading-relaxed mb-6">

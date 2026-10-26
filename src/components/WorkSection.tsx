@@ -30,7 +30,7 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-[#EC2929] inline-block" />
               <span className="text-xs font-mono font-bold tracking-widest text-[#230D10] uppercase">
-                02 / WORK
+                03 / WORK
               </span>
             </div>
             <h2
@@ -140,8 +140,8 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
 
             <p className="text-sm font-medium text-[#4A2E33] max-w-md mx-auto leading-relaxed mb-6">
               {activeTab === "products"
-                ? "Building web applications and interactive prototypes. First project ships soon."
-                : "Documenting interface design systems, user flows, and interaction patterns. Case studies publishing soon."}
+                ? "Building web applications and interactive prototypes with AI capabilities."
+                : "Documenting interface design systems, user flows, and interaction patterns."}
             </p>
 
             <div className="inline-block px-3 py-1 bg-[#FFF7F5] border border-[#230D10] text-[11px] font-mono font-bold text-[#230D10] uppercase">
