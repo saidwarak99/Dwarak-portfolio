@@ -121,7 +121,7 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
             ))}
           </div>
         ) : (
-          /* Single Compact Coming Soon State (Unique wording & icon per tab) */
+          /* Single Compact Empty State (Unique wording & icon per tab) */
           <div className="border-2 border-[#230D10] bg-white p-8 sm:p-12 text-center max-w-xl mx-auto brutalist-shadow-lg">
             <div className="w-12 h-12 border-2 border-[#230D10] bg-[#FFF7F5] text-[#EC2929] flex items-center justify-center mx-auto mb-4 brutalist-shadow-sm">
               {activeTab === "products" ? (

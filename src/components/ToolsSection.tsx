@@ -243,8 +243,9 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
 
           {/* Rebalanced Category Filter Tabs: All, Design, Frontend, AI, Prototyping */}
           <div
-            className="grid grid-cols-3 sm:flex sm:flex-wrap sm:items-center gap-2 text-xs font-mono font-bold w-full lg:w-auto"
+            className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs font-mono font-bold w-full sm:w-auto"
             role="tablist"
+            aria-label="Filter tools by category"
           >
             {simplifiedCategories.map((cat) => {
               const isActive = activeTab === cat.id;
@@ -255,8 +256,8 @@ export function ToolsSection({ tools, hasIllustration = false }: ToolsSectionPro
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(cat.id)}
-                  className={`px-3 py-1.5 border-2 border-[#230D10] uppercase transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] text-center ${
-                    isPrototyping ? "col-span-2 sm:col-auto" : ""
+                  className={`px-3 py-2 border-2 border-[#230D10] uppercase transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[#EC2929] text-center whitespace-nowrap ${
+                    isPrototyping ? "col-span-2 sm:col-span-1" : "col-span-1"
                   } ${
                     isActive
                       ? "bg-[#230D10] text-[#FFF7F5] brutalist-shadow-sm translate-x-0.5 translate-y-0.5"
