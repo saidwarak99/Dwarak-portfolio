@@ -9,15 +9,26 @@ interface WorkSectionProps {
   projects?: Project[];
 }
 
+function isUXCaseStudy(project: Project): boolean {
+  const cat = (project.category || "").toLowerCase();
+  const type = (project.project_type || "").toLowerCase();
+  return (
+    cat === "ux-ui" ||
+    cat === "ux-projects" ||
+    cat === "design" ||
+    cat.includes("ux") ||
+    cat.includes("design") ||
+    type === "case-study" ||
+    type.includes("ux") ||
+    type.includes("design")
+  );
+}
+
 export function WorkSection({ projects = [] }: WorkSectionProps) {
   const [activeTab, setActiveTab] = useState<"products" | "ux">("products");
 
-  const productProjects = projects.filter(
-    (p) => p.category === "ai-products" || p.category === "engineering"
-  );
-  const uxProjects = projects.filter(
-    (p) => p.category === "ux-projects" || p.category === "design"
-  );
+  const productProjects = projects.filter((p) => !isUXCaseStudy(p));
+  const uxProjects = projects.filter(isUXCaseStudy);
 
   const activeProjects = activeTab === "products" ? productProjects : uxProjects;
 
@@ -55,6 +66,11 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
             >
               <Laptop className="w-3.5 h-3.5" />
               <span>Product builds</span>
+              {productProjects.length > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#EC2929] text-white font-bold leading-none">
+                  {productProjects.length}
+                </span>
+              )}
             </button>
             <button
               role="tab"
@@ -68,17 +84,22 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
             >
               <Layers className="w-3.5 h-3.5" />
               <span>UX case studies</span>
+              {uxProjects.length > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#EC2929] text-white font-bold leading-none">
+                  {uxProjects.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
-        {/* Content Area */}
+        {/* Content Area: Strictly shows real project cards OR tab-specific concise empty state */}
         {activeProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {activeProjects.map((project) => (
               <article
                 key={project.id}
-                className="relative border-2 border-[#230D10] bg-white p-6 brutalist-shadow-lg flex flex-col justify-between group"
+                className="relative border-2 border-[#230D10] bg-white p-5 sm:p-6 brutalist-shadow-lg flex flex-col justify-between group hover:border-[#EC2929] transition-colors"
               >
                 {/* Corner [+] Marks on real project cards */}
                 <div className="absolute top-2 left-2 text-xs font-mono font-bold text-[#EC2929] select-none" aria-hidden="true">[+]</div>
@@ -86,35 +107,82 @@ export function WorkSection({ projects = [] }: WorkSectionProps) {
                 <div className="absolute bottom-2 left-2 text-xs font-mono font-bold text-[#EC2929] select-none" aria-hidden="true">[+]</div>
                 <div className="absolute bottom-2 right-2 text-xs font-mono font-bold text-[#EC2929] select-none" aria-hidden="true">[+]</div>
 
-                <div className="space-y-3 pt-2">
-                  <div className="text-[11px] font-mono font-bold uppercase text-[#EC2929]">
-                    {project.category}
+                <div className="space-y-4 pt-1">
+                  {/* Real Cover Image when available */}
+                  {project.cover_image && (
+                    <div className="relative w-full aspect-[16/10] border-2 border-[#230D10] bg-[#FFF7F5] overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={project.cover_image}
+                        alt={project.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+
+                  {/* Metadata labels */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono font-bold uppercase px-2 py-0.5 bg-[#FFF7F5] border border-[#230D10] text-[#EC2929]">
+                        {project.category}
+                      </span>
+                      {project.project_type && (
+                        <span className="text-[11px] font-mono text-[#4A2E33] font-semibold uppercase">
+                          {project.project_type.replace(/[-_]/g, " ")}
+                        </span>
+                      )}
+                    </div>
+                    {project.status && (
+                      <span className="text-[10px] font-mono uppercase text-[#4A2E33] font-bold">
+                        {project.status.replace(/[-_]/g, " ")}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Title & Link */}
                   <h3
-                    className="text-2xl font-black text-[#230D10] uppercase tracking-tight group-hover:text-[#EC2929] transition-colors"
+                    className="text-xl sm:text-2xl font-black text-[#230D10] uppercase tracking-tight group-hover:text-[#EC2929] transition-colors"
                     style={{ fontFamily: "var(--font-syne)" }}
                   >
                     <Link href={`/projects/${project.slug}`}>
                       {project.title}
                     </Link>
                   </h3>
+
+                  {/* Short Description */}
                   {project.short_description && (
                     <p className="text-sm text-[#4A2E33] leading-relaxed line-clamp-3">
                       {project.short_description}
                     </p>
                   )}
+
+                  {/* Tools / Tags */}
+                  {Array.isArray(project.tools) && project.tools.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {project.tools.slice(0, 4).map((tool) => (
+                        <span
+                          key={tool}
+                          className="text-[10px] font-mono uppercase px-2 py-0.5 bg-[#FFF7F5] border border-[#E8CEC9] text-[#230D10]"
+                        >
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-6 mt-6 border-t border-[#E8CEC9] flex items-center justify-between">
+                {/* Footer Action */}
+                <div className="pt-5 mt-5 border-t border-[#E8CEC9] flex items-center justify-between">
                   <span className="text-xs font-mono font-bold uppercase text-[#230D10]">
-                    Case Study
+                    {isUXCaseStudy(project) ? "Case Study" : "Live Build"}
                   </span>
                   <Link
                     href={`/projects/${project.slug}`}
                     className="inline-flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-[#230D10] group-hover:text-[#EC2929] transition-colors"
                   >
                     <span>Explore</span>
-                    <ArrowUpRight className="w-4 h-4" />
+                    <ArrowUpRight className="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </Link>
                 </div>
               </article>
