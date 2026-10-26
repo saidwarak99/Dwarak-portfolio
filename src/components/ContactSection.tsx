@@ -32,9 +32,9 @@ export function ContactSection({
     <section id="contact" aria-label="Contact Section" className="pt-20 pb-20 bg-[#FFF7F5] relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Box - Corner brackets removed (reserved for hero and project cards) */}
-        <div className="border-2 border-[#230D10] bg-[#FFF7F5] p-6 sm:p-10 md:p-12 brutalist-shadow-lg">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-8 lg:gap-14 items-start">
-            {/* Left Column: Title & Intro (min-w-0 w-full to prevent collision with right cards) */}
+        <div className="border-2 border-[#230D10] bg-[#FFF7F5] p-6 sm:p-8 md:p-10 brutalist-shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-start">
+            {/* Left Column: Title & Intro (guaranteed clearance, zero overlap) */}
             <div className="min-w-0 w-full space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-[#EC2929] inline-block" />
@@ -43,16 +43,17 @@ export function ContactSection({
                 </span>
               </div>
 
-              {/* Fluid clamp heading with break-words so it never collides */}
+              {/* Fluid clamp heading sized to guarantee generous clearance from cards */}
               <h2
-                className="text-[clamp(2.2rem,4.5vw,4.25rem)] font-black text-[#230D10] uppercase tracking-tight leading-[0.95] break-words"
+                className="text-[clamp(1.85rem,3.4vw,3.25rem)] font-black uppercase tracking-tight leading-[0.92] break-words"
                 style={{
                   fontFamily: "var(--font-syne)",
                   overflowWrap: "break-word",
                   wordBreak: "break-word",
                 }}
               >
-                LET&apos;S <span className="whitespace-nowrap">CONNECT.</span>
+                <span className="block text-[#EC2929]">LET&apos;S</span>
+                <span className="block text-[#230D10] whitespace-nowrap">CONNECT.</span>
               </h2>
 
               <p className="text-sm sm:text-base text-[#4A2E33] leading-relaxed max-w-md pt-2">
